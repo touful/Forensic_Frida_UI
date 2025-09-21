@@ -1,0 +1,8 @@
+[
+  {
+    "class": "java.lang.StringFactory",
+    "method": "newStringFromString",
+    "avoid_args": [],
+    "avoid_returns": []
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "test.json": {
+    "description": "默认测试配置文件",
+    "tips": "包含常用的测试HOOK规则，如字符串比较、Base64编解码、加密函数等"
+  },
+  "strings.json": {
+    "description": "字符串创建HOOK配置",
+    "tips": "包含字符串创建HOOK规则"
+  }
+}

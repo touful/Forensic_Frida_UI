@@ -1,0 +1,49 @@
+[
+  {
+    "class": "java.lang.String",
+    "method": "compareTo",
+    "avoid_args": [{
+      "front": ["CN","zh"],
+      "back": [],
+      "matchall": [""]
+    }],
+    "avoid_returns": []
+  },
+  {
+    "class": "java.lang.String",
+    "method": "equals",
+    "avoid_args": [{
+      "front": ["res/","layout_","androidx.","android.","com.example"],
+      "back": ["layout"],
+      "matchall": ["","und","display","autofill","sound_effects_enabled",
+          "LinearLayout","TextView","UTF-8","zh-CN","en","CNY","Button",
+          "view","blink","sans-serif-medium","XXX","US-ASCII","ISO-8859-1"
+      ]
+    }],
+    "avoid_returns": []
+  },
+  {
+    "class": "java.lang.StringFactory",
+    "method": "newStringFromString",
+    "avoid_args": [],
+    "avoid_returns": []
+  },
+  {
+    "class": "android.util.Base64",
+    "method": "encodeToString",
+    "avoid_args": [],
+    "avoid_returns": []
+  },
+  {
+    "class": "android.util.Base64",
+    "method": "decode",
+    "avoid_args": [],
+    "avoid_returns": []
+  },
+  {
+    "class": "javax.crypto.Cipher",
+    "method": "doFinal",
+    "avoid_args": [],
+    "avoid_returns": []
+  }
+]

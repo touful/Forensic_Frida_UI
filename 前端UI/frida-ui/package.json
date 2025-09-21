@@ -1,0 +1,37 @@
+{
+  "name": "frida-ui",
+  "version": "1.0.0",
+  "description": "A Wireshark-like UI for Frida hook data",
+  "main": "main.js",
+  "scripts": {
+    "start": "chcp 65001 > nul && webpack --mode development && electron .",
+    "build": "webpack --mode production",
+    "dev": "chcp 65001 > nul && webpack --mode development && electron .",
+    "watch": "chcp 65001 > nul && webpack --mode development --watch"
+  },
+  "keywords": [
+    "frida",
+    "ui",
+    "wireshark"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "babel-loader": "^9.2.1",
+    "css-loader": "^6.11.0",
+    "electron": "latest",
+    "style-loader": "^3.3.4",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "antd": "^4.21.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-resizable": "^3.0.5",
+    "ws": "^8.8.0"
+  }
+}
