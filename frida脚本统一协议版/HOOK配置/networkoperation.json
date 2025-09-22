@@ -1,0 +1,72 @@
+[
+    {
+      "class": "java.net.URL",
+      "method": "openConnection",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "用于发起HTTP请求，会留下目标URL（如https://www.baidu.com）的网络连接痕迹，可被取证分析。"
+    },
+    {
+      "class": "okhttp3.OkHttpClient",
+      "method": "newCall",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "发起同步或异步HTTP请求，请求的URL、Header、POST数据等均会留下网络行为痕迹，可用于取证。"
+    },
+    {
+      "class": "java.net.Socket",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "建立TCP连接（如连接httpbin.org:80），会在系统网络栈留下连接记录和目标IP/端口痕迹。"
+    },
+    {
+      "class": "java.net.DatagramSocket",
+      "method": "send",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "发送UDP数据包（如向8.8.8.8:53发送消息），会在网络层留下UDP通信痕迹，可用于网络行为取证。"
+    },
+    {
+      "class": "java.net.ServerSocket",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "启动TCP服务器并监听随机端口，会留下本地端口监听和接受外部连接的痕迹，可被系统或网络监控工具捕获。"
+    },
+    {
+      "class": "java.net.DatagramSocket",
+      "method": "receive",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "UDP服务器接收数据包，会记录来源IP和端口以及接收到的数据内容，形成可取证的网络交互日志。"
+    },
+    {
+      "class": "android.util.Log",
+      "method": "d",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "输出调试日志，包含网络响应内容、服务器端口、连接IP等敏感信息，可能被logcat或日志分析工具提取作为取证依据。"
+    },
+    {
+      "class": "android.util.Log",
+      "method": "e",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "输出错误日志，包含异常信息和网络操作失败详情，可用于逆向分析应用的网络行为意图和故障点。"
+    },
+    {
+      "class": "java.io.OutputStream",
+      "method": "write",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "向TCP Socket写入原始HTTP请求数据，会在网络流量中留下明文协议痕迹，可被抓包工具（如Wireshark）捕获分析。"
+    },
+    {
+      "class": "okhttp3.RequestBody",
+      "method": "create",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "构造POST请求体（如{\"name\":\"test\"}），数据内容会随请求发送，留下应用层数据交互痕迹，可用于内容取证。"
+    }
+  ]

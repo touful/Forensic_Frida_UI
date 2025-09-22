@@ -6,19 +6,19 @@ export const getDefaultColumns = (windowSize) => [
     title: 'ID',
     dataIndex: 'id',
     width: 80,
-    fixed: windowSize.width < 768 ? false : 'left'
+    fixed: windowSize && windowSize.width < 768 ? false : 'left'
   },
   {
     title: '时间戳',
     dataIndex: 'timestamp',
-    width: windowSize.width < 576 ? 80 : 120,
+    width: windowSize && windowSize.width < 576 ? 80 : 120,
     ellipsis: true
   },
   {
     title: '方法',
     dataIndex: 'method',
     className: 'method-column',
-    width: windowSize.width < 576 ? 150 : 250,
+    width: windowSize && windowSize.width < 576 ? 150 : 250,
     ellipsis: true,
     render: (text) => <Tag color="blue">{text}</Tag>
   },
@@ -26,7 +26,7 @@ export const getDefaultColumns = (windowSize) => [
     title: '参数',
     dataIndex: 'args',
     className: 'args-column',
-    width: windowSize.width < 576 ? 150 : 200,
+    width: windowSize && windowSize.width < 576 ? 150 : 200,
     ellipsis: true,
     render: (args) => (
       <div>
@@ -51,7 +51,7 @@ export const getDefaultColumns = (windowSize) => [
     title: '返回值',
     dataIndex: 'returns',
     className: 'returns-column',
-    width: windowSize.width < 576 ? 150 : 200,
+    width: windowSize && windowSize.width < 576 ? 150 : 200,
     ellipsis: true
   }
 ];

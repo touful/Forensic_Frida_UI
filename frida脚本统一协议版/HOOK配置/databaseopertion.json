@@ -1,0 +1,128 @@
+[
+    {
+      "class": "android.util.Log",
+      "method": "d",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "记录调试级别的日志信息，可能包含数据库操作详情、用户数据、SQL语句、远程服务地址等敏感痕迹。"
+    },
+    {
+      "class": "android.util.Log",
+      "method": "e",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "记录错误级别的日志信息，可能包含异常堆栈、数据库操作失败原因等取证痕迹。"
+    },
+    {
+      "class": "android.database.sqlite.SQLiteDatabase",
+      "method": "insert",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "执行原生SQLite插入操作，操作记录可能被日志记录或数据库文件本身留存，构成数据痕迹。"
+    },
+    {
+      "class": "android.database.sqlite.SQLiteDatabase",
+      "method": "query",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "执行原生SQLite查询操作，查询结果数量被日志记录，可能暴露数据存在性。"
+    },
+    {
+      "class": "android.database.sqlite.SQLiteDatabase",
+      "method": "close",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "关闭数据库连接，虽无直接数据输出，但结合上下文日志可推断操作完成时间点。"
+    },
+    {
+      "class": "android.database.sqlite.SQLiteOpenHelper",
+      "method": "getWritableDatabase",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "获取可写数据库实例，是本地数据库操作的起点，其调用本身可作为操作痕迹。"
+    },
+    {
+      "class": "com.example.testoffridalab.AppDatabase",
+      "method": "getDatabase",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "获取Room数据库实例，是Room操作的入口，调用痕迹可表明Room数据库被访问。"
+    },
+    {
+      "class": "com.example.testoffridalab.UserDao",
+      "method": "insertUser",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "通过Room插入用户数据，具体数据内容会被日志间接记录（通过后续查询数量）。"
+    },
+    {
+      "class": "com.example.testoffridalab.UserDao",
+      "method": "getAllUsers",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "通过Room查询所有用户，查询结果数量被日志记录，暴露数据量。"
+    },
+    {
+      "class": "com.example.testoffridalab.UserDao",
+      "method": "updateUser",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "通过Room更新用户数据，更新操作及目标用户名被日志记录。"
+    },
+    {
+      "class": "com.j256.ormlite.dao.RuntimeExceptionDao",
+      "method": "create",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "通过ORMLite创建（插入）数据对象，插入操作及数据量被日志记录。"
+    },
+    {
+      "class": "com.j256.ormlite.dao.RuntimeExceptionDao",
+      "method": "queryForAll",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "通过ORMLite查询所有数据对象，查询结果数量被日志记录。"
+    },
+    {
+      "class": "com.j256.ormlite.dao.RuntimeExceptionDao",
+      "method": "update",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "通过ORMLite更新数据对象，更新操作及目标对象名称被日志记录。"
+    },
+    {
+      "class": "com.example.testoffridalab.DatabaseOperationHelper",
+      "method": "simulateMySqlOperation",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "模拟MySQL操作，详细输出SQL语句、服务器地址、用户名、操作结果等，是重要的模拟痕迹。"
+    },
+    {
+      "class": "com.example.testoffridalab.DatabaseOperationHelper",
+      "method": "simulatePostgreSqlOperation",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "模拟PostgreSQL操作，详细输出SQL语句、服务器地址、用户名、事务操作等，是重要的模拟痕迹。"
+    },
+    {
+      "class": "com.example.testoffridalab.DatabaseOperationHelper",
+      "method": "simulateMongoDbOperation",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "模拟MongoDB操作，详细输出文档内容、查询条件、聚合结果等，是重要的模拟痕迹。"
+    },
+    {
+      "class": "com.example.testoffridalab.DatabaseOperationHelper",
+      "method": "simulateRedisOperation",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "模拟Redis操作，详细输出键值对、列表、集合、有序集合等所有操作命令及结果，包含大量模拟数据痕迹。"
+    },
+    {
+      "class": "com.example.testoffridalab.DatabaseOperationHelper",
+      "method": "simulateRestApiDatabaseOperation",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "模拟REST API操作，详细输出HTTP方法、URL、请求体、响应状态码及内容，是重要的网络交互模拟痕迹。"
+    }
+  ]

@@ -4,21 +4,51 @@ import { SearchOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/
 import ResizableTitle from './DataTable/components/ResizableTitle';
 import DetailModal from './DataTable/components/DetailModal';
 import { getDefaultColumns } from './DataTable/columns';
+import PermissionAnalysis from './PermissionAnalysis';
+import SmartForensics from './SmartForensics';
 
 const { Content } = Layout;
 const { Text } = Typography;
 
+const DEFAULT_COLUMNS = [
+  {
+    title: '时间戳',
+    dataIndex: 'timestamp',
+    key: 'timestamp',
+    width: 150,
+  },
+  {
+    title: '方法',
+    dataIndex: 'method',
+    key: 'method',
+    width: 200,
+  },
+  {
+    title: '参数',
+    dataIndex: 'args',
+    key: 'args',
+    width: 250,
+  },
+  {
+    title: '返回值',
+    dataIndex: 'returns',
+    key: 'returns',
+    width: 250,
+  }
+];
+
 const DataTable = ({ 
   windowSize, 
   data, 
-  filteredData, 
+  filteredData,
   isCapturing,
   searchText,
   setSearchText,
-  columns // 接收columns参数
+  columns: propsColumns, // 重命名属性
+  pageType // 新增页面类型参数
 }) => {
   const containerRef = useRef(null);
-  const [tableColumns, setTableColumns] = useState([]);
+  const [columns, setColumns] = useState([]); // 初始为空，等待 defaultColumns 计算
   const [containerWidth, setContainerWidth] = useState(0); // 添加containerWidth状态
   const [sortedData, setSortedData] = useState([]); // 存储排序后的数据
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // 排序配置，默认按ID升序
@@ -36,30 +66,26 @@ const DataTable = ({
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [modalWidth, setModalWidth] = useState(800);
 
-  const defaultColumns = getDefaultColumns(windowSize);
+  const defaultColumns = useMemo(() => {
+    // 确保windowSize存在再调用getDefaultColumns
+    return windowSize ? getDefaultColumns(windowSize) : [];
+  }, [windowSize]);
 
-  const initColumns = () => {
-    return columns.map((col, index) => {
-      // 根据屏幕宽度设置默认列宽
-      let defaultWidth = 200;
-      if (windowSize.width < 576) {
-        defaultWidth = 150;
-      } else if (windowSize.width < 768) {
-        defaultWidth = 180;
-      }
+  // 根据页面类型渲染不同内容
+  const renderContent = () => {
+    switch (pageType) {
+      case 'permission-analysis':
+        return <PermissionAnalysis windowSize={windowSize} />;
       
-      // 确保每列都有宽度，默认为计算后的默认宽度
-      const width = col.width || defaultWidth;
-      return {
-        ...col,
-        width: width,
-        onHeaderCell: (column) => ({
-          width: column.width,
-          onResize: handleResize(index),
-        }),
-      };
-    });
+      case 'smart-forensics':
+        return <SmartForensics windowSize={windowSize} />;
+        
+      case 'frida-monitor':
+      default:
+        return renderFridaMonitor();
+    }
   };
+
 
   // 处理排序
   const handleSort = (key) => {
@@ -71,7 +97,12 @@ const DataTable = ({
   };
 
   // 根据排序配置对数据进行排序
-  const sortData = (dataToSort, config) => {
+  const sortData = (dataToSort = [], config) => {
+    // 确保 dataToSort 是数组
+    if (!Array.isArray(dataToSort)) {
+      return [];
+    }
+    
     if (!config.key) return dataToSort;
 
     return [...dataToSort].sort((a, b) => {
@@ -141,38 +172,56 @@ const DataTable = ({
     setTableColumns(newColumns);
   };
 
-  // 设置表格列，添加排序功能
+  // 初始化列配置：优先使用父组件传入的列，否则使用根据窗口大小动态生成的默认列
   useEffect(() => {
-    const cols = (columns || defaultColumns).map(col => {
-      // 为每个列添加排序功能
-      return {
-        ...col,
-        title: (
-          <Tooltip title={`点击排序`}>
-            <span 
-              onClick={() => handleSort(col.dataIndex)}
-              style={{ 
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center'
-              }}
-            >
-              {col.title}
-              {sortConfig.key === col.dataIndex && (
-                sortConfig.direction === 'asc' ? 
-                <CaretUpOutlined style={{ fontSize: '12px', marginLeft: '4px' }} /> : 
-                <CaretDownOutlined style={{ fontSize: '12px', marginLeft: '4px' }} />
-              )}
-            </span>
-          </Tooltip>
-        )
-      };
-    });
-    setTableColumns(cols);
+    if (propsColumns && Array.isArray(propsColumns) && propsColumns.length > 0) {
+      setColumns(propsColumns);
+    } else if (defaultColumns && defaultColumns.length > 0) {
+      setColumns(defaultColumns);
+    }
+  }, [propsColumns, defaultColumns]);
+
+  // 计算有效的表格列，过滤掉undefined元素并添加排序和调整大小功能
+  const tableColumns = useMemo(() => {
+    // 确保columns存在且为数组
+    if (!columns || !Array.isArray(columns)) return [];
+    
+    // 过滤掉undefined或null的列
+    const validColumns = columns.filter(col => col !== undefined && col !== null);
+    
+    return validColumns.map(col => ({
+      ...col,
+      title: (
+        <Tooltip title={`点击排序`}>
+          <span 
+            onClick={() => handleSort(col.dataIndex)}
+            style={{ 
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+          >
+            {col.title}
+            {sortConfig.key === col.dataIndex && (
+              sortConfig.direction === 'asc' ? 
+              <CaretUpOutlined style={{ fontSize: '12px', marginLeft: '4px' }} /> : 
+              <CaretDownOutlined style={{ fontSize: '12px', marginLeft: '4px' }} />
+            )}
+          </span>
+        </Tooltip>
+      ),
+      onHeaderCell: (column) => ({
+        width: column.width,
+        onResize: handleResize(validColumns.indexOf(column)),
+      }),
+    }));
   }, [columns, sortConfig]);
 
   // 计算总宽度
   const totalWidth = useMemo(() => {
+    // 确保tableColumns存在
+    if (!tableColumns) return 0;
+    
     return tableColumns.reduce((sum, col) => sum + (col.width || 200), 0);
   }, [tableColumns]);
 
@@ -199,225 +248,132 @@ const DataTable = ({
   const closeDetailModal = () => {
     setDetailModalVisible(false);
     setSelectedRecord(null);
-    setModalWidth(800);
   };
 
-  const components = {
-    header: {
-      cell: ResizableTitle,
-    },
-  };
+  // 渲染Frida监控内容
+  const renderFridaMonitor = () => {
+    // 由于我们已经确保了columns始终有默认值，这里可以直接渲染
+    
+    const components = {
+      header: {
+        cell: ResizableTitle,
+      },
+    };
 
-  // 添加样式到head部分
-  const tableHeaderStyle = `
-    .react-resizable {
-      position: relative;
-      background-clip: padding-box;
-      background-clip: padding-box;
-      width: 100%;
-      display: inline-block;
-    }
-    
-    .react-resizable-handle {
-      position: absolute;
-      right: -5px;
-      bottom: 0;
-      top: 0;
-      width: 10px;
-      cursor: col-resize;
-      z-index: 1;
-    }
-    
-    .react-resizable-handle:hover {
-      border-right: 2px solid #1890ff;
-    }
-    
-    /* 强制覆盖Ant Design表格样式 */
-    .ant-table {
-      width: 100% !important;
-      table-layout: fixed !important;
-    }
-    
-    .ant-table-container {
-      width: 100% !important;
-      display: table !important;
-    }
-    
-    .ant-table-thead > tr {
-      display: table-row !important;
-      width: 100% !important;
-    }
-    
-    .ant-table-thead > tr > th {
-      display: table-cell !important;
-      position: static !important;
-      float: none !important;
-      background: #fafafa !important;
-      font-weight: 500 !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      white-space: nowrap !important;
-      padding: 16px !important;
-      box-sizing: border-box !important;
-    }
-    
-    .ant-table-tbody > tr {
-      cursor: pointer;
-    }
-    
-    .ant-table-tbody > tr:hover {
-      background-color: #f5f5f5;
-    }
-    
-    .ant-table-tbody > tr > td {
-      display: table-cell !important;
-      word-break: break-all !important;
-      word-wrap: break-word !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      white-space: nowrap !important;
-      padding: 16px !important;
-      box-sizing: border-box !important;
-    }
-    
-    .ant-table-tbody > tr > td > div {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      overflow-y: auto;
-    }
-    
-    /* 确保滚动条在所有浏览器中可见 */
-    .table-container::-webkit-scrollbar {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-    }
-    
-    .table-container::-webkit-scrollbar-thumb {
-      border-radius: 8px;
-      background-color: rgba(0, 0, 0, 0.3);
-    }
-    
-    .table-container::-webkit-scrollbar-track {
-      background-color: rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-    }
-    
-    /* Firefox scrollbar */
-    .table-container {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
-    }
-    
-    /* 分页控件居中 */
-    .ant-table-pagination {
-      display: flex !important;
-      justify-content: center !important;
-      margin: 16px 0 !important;
-    }
-    
-    /* 确保分页控件在小屏幕上也能正常显示 */
-    .ant-pagination-options {
-      margin-left: 8px !important;
-    }
-    
-    .ant-pagination-total-text {
-      margin-right: 8px !important;
-    }
-    
-    /* 模态框中的数据展示样式 */
-    .data-content {
-      word-wrap: break-word;
-      white-space: pre-wrap;
-      max-height: 300px;
-      overflow-y: auto;
-      padding: 8px;
-      background-color: #f9f9f9;
-      border-radius: 4px;
-      border: 1px solid #e8e8e8;
-    }
-    
-    .hex-content {
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-      font-size: 12px;
-      line-height: 1.4;
-    }
-    
-    .tab-content {
-      max-height: 60vh;
-      overflow-y: auto;
-      padding: 16px;
-    }
-  `;
-
-  return (
-    <Content 
-      style={{ 
-        padding: windowSize.width < 768 ? 12 : 24, 
-        background: '#fff',
-        width: '100%'
-      }}
-    >
-      <style>{tableHeaderStyle}</style>
-      <Row gutter={windowSize.width < 576 ? 8 : 16} style={{ marginBottom: 12 }}>
-        <Col>
-          <Card size="small">
-            <div style={{ 
-              fontSize: windowSize.width < 576 ? '10px' : '12px', 
-              fontWeight: 500 
-            }}>
-              状态: {isCapturing ? '捕获中...' : '已停止'}
-            </div>
-          </Card>
-        </Col>
-        <Col>
-          <Card size="small">
-            <div style={{ 
-              fontSize: windowSize.width < 576 ? '10px' : '12px', 
-              fontWeight: 500 
-            }}>
-              数据条数: {data.length}
-            </div>
-          </Card>
-        </Col>
-      </Row>
+    // 添加样式到head部分
+    const tableHeaderStyle = `
+      .react-resizable {
+        position: relative;
+        background-clip: padding-box;
+      }
       
-      <div className="table-container" ref={containerRef} style={{ overflowY: 'auto' }}>
+      .react-resizable-handle {
+        position: absolute;
+        right: -5px;
+        bottom: 0;
+        top: 0;
+        width: 10px;
+        cursor: col-resize;
+        z-index: 1;
+      }
+      
+      .react-resizable-handle:hover {
+        border-right: 2px solid #1890ff;
+      }
+      
+      .ant-table-thead > tr > th {
+        position: relative;
+        background: #fafafa;
+        font-weight: 500;
+      }
+      
+      .ant-table-tbody > tr > td {
+        word-break: break-all;
+        word-wrap: break-word;
+      }
+    `;
+
+    return (
+      <>
+        <style>{tableHeaderStyle}</style>
+        <Row gutter={windowSize && windowSize.width < 576 ? 8 : 16} style={{ marginBottom: 16 }}>
+          <Col>
+            <Card size="small">
+              <div style={{ 
+                fontSize: windowSize && windowSize.width < 576 ? '12px' : '14px', 
+                fontWeight: 500 
+              }}>
+                状态: {isCapturing ? '捕获中...' : '已停止'}
+              </div>
+            </Card>
+          </Col>
+          <Col>
+            <Card size="small">
+              <div style={{ 
+                fontSize: windowSize && windowSize.width < 576 ? '12px' : '14px', 
+                fontWeight: 500 
+              }}>
+                数据条数: {data?.length || 0}
+              </div>
+            </Card>
+          </Col>
+          <Col flex="auto">
+            <Input
+              placeholder="搜索方法、参数或返回值..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              size={windowSize && windowSize.width < 576 ? "small" : "default"}
+            />
+          </Col>
+        </Row>
+        
         <Table
           columns={tableColumns}
           dataSource={sortedData}
-          pagination={pagination}
-          onChange={handleTableChange}
-          scroll={{ 
-            x: totalWidth,
-            y: windowSize.width < 576 
-              ? 'calc(100vh - 320px)' 
-              : windowSize.height < 768 
-                ? 'calc(100vh - 300px)' 
-                : 'calc(100vh - 290px)' 
+          pagination={{ 
+            ...pagination,
+            size: windowSize && windowSize.width < 576 ? 'small' : 'default'
           }}
-          size={windowSize.width < 576 ? "small" : "middle"}
+          scroll={{ 
+            y: windowSize && windowSize.width < 576 
+              ? 'calc(100vh - 340px)' 
+              : windowSize && windowSize.height < 768 
+                ? 'calc(100vh - 320px)' 
+                : 'calc(100vh - 310px)' 
+          }}
+          size={windowSize && windowSize.width < 576 ? "small" : "middle"}
           components={components}
           tableLayout="fixed"
           sticky
-          style={{ width: '100%' }}
+          onChange={handleTableChange}
           onRow={(record) => ({
             onClick: () => handleRowClick(record),
           })}
         />
-      </div>
-      
-      <DetailModal 
-        visible={detailModalVisible}
-        selectedRecord={selectedRecord}
-        onClose={closeDetailModal}
-        modalWidth={modalWidth}
-      />
+        
+        <DetailModal
+          visible={detailModalVisible}
+          onCancel={closeDetailModal}
+          record={selectedRecord}
+          width={modalWidth}
+        />
+      </>
+    );
+  };
+
+  return (
+    <Content 
+      ref={containerRef}
+      style={{ 
+        padding: windowSize && windowSize.width < 768 ? 12 : 24, 
+        background: '#fff',
+        height: '100%',
+        overflow: 'auto'
+      }}
+    >
+      {renderContent()}
     </Content>
   );
 };

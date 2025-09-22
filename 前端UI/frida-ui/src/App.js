@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Layout, Form, message } from 'antd';
+import { Layout, Form, message, Tabs } from 'antd';
 import DataFilter from './components/DataFilter';
 import AppHeader from './components/AppComponents/Header';
 import Sidebar from './components/AppComponents/Sidebar';
 import DataTable from './components/AppComponents/DataTable';
+import PageManager from './components/AppComponents/PageManager';
 import { DEFAULT_HOOK_CONFIG, DEFAULT_TARGET_PACKAGE, DEFAULT_DEVICE_ID } from './utils/constants';
 import { useDataHandling } from './hooks/useDataHandling';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -11,6 +12,7 @@ import { useConfigFiles } from './hooks/useConfigFiles';
 import './App.css';
 
 const { ipcRenderer } = window.require('electron');
+const { TabPane } = Tabs;
 
 const App = () => {
   const [windowSize, setWindowSize] = useState({
@@ -22,9 +24,27 @@ const App = () => {
   const [targetPackage, setTargetPackage] = useState(DEFAULT_TARGET_PACKAGE);
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE_ID);
   
+  // 页面管理状态
+  const [pages, setPages] = useState([
+    { 
+      id: 1, 
+      name: 'Frida监控', 
+      type: 'frida-monitor',
+      typeName: 'Frida监控',
+      data: [], 
+      filteredData: [],
+      dataCounterRef: useRef(0)
+    }
+  ]);
+  const [activePageId, setActivePageId] = useState(1);
+  
   const isMounted = useRef(true);
   
-  // 使用拆分的hooks
+  // 获取当前页面
+  const currentPage = pages.find(page => page.id === activePageId) || pages[0];
+  
+  
+  // 使用拆分的hooks - 使用当前页面的数据
   const {
     // 状态
     data,
@@ -38,9 +58,33 @@ const App = () => {
     
     // 函数
     addData,
-    handleFilterChange,
-    clearData
+    handleFilterChange
   } = useDataHandling(isMounted);
+  
+  // 清空数据（整合页面数据和状态管理）
+  const clearData = () => {
+    // 更新当前页面的数据
+    setPages(prevPages => 
+      prevPages.map(page => 
+        page.id === activePageId 
+          ? { ...page, data: [], filteredData: [] } 
+          : page
+      )
+    );
+    
+    // 重置计数器
+    if (currentPage && currentPage.dataCounterRef) {
+      currentPage.dataCounterRef.current = 0;
+    }
+  };
+
+  // 初始化时设置当前页面数据
+  useEffect(() => {
+    if (currentPage) {
+      setData(currentPage.data);
+      setFilteredData(currentPage.filteredData);
+    }
+  }, [currentPage, setData, setFilteredData]);
   
   const {
     // 状态
@@ -113,7 +157,11 @@ const App = () => {
   // 处理导出到CSV
   const handleExportToCSV = async () => {
     try {
-      const result = await ipcRenderer.invoke('export-to-csv', data);
+      // 获取当前页面数据
+      const currentPage = pages.find(page => page.id === activePageId);
+      const exportData = currentPage ? currentPage.data : [];
+      
+      const result = await ipcRenderer.invoke('export-to-csv', exportData);
       if (result.success) {
         message.success(`数据已导出到: ${result.filePath}`);
       } else {
@@ -139,8 +187,15 @@ const App = () => {
           returns: item.returns || ''
         }));
         
-        setData(validData);
-        setFilteredData(validData);
+        // 更新当前页面数据
+        setPages(prevPages => 
+          prevPages.map(page => 
+            page.id === activePageId 
+              ? { ...page, data: validData, filteredData: validData } 
+              : page
+          )
+        );
+        
         message.success(`成功从 ${result.filePath} 导入 ${validData.length} 条数据`);
       } else {
         message.error(result.message);
@@ -162,16 +217,48 @@ const App = () => {
   }, [selectedConfig, configFiles]);
 
   // WebSocket消息处理
-  const handleWebSocketMessage = (message) => {
+  const handleWebSocketMessage = useCallback((message) => {
     console.log('收到WebSocket消息:', message);
     if (message.type === 'frida_data') {
       addData(message.payload);
+      
+      // 再次获取当前页面，因为可能在异步中发生变化
+      const current = pages.find(page => page.id === activePageId) || pages[0];
+      
+      // 确保dataCounterRef存在
+      if (!current.dataCounterRef) {
+        console.warn('dataCounterRef not initialized yet');
+        return; // 等待下一次消息或初始化完成
+      }
+      
+      // 确保数据包含id and timestamp
+      const processedData = {
+        key: `${Date.now()}-${Math.random()}-${current.dataCounterRef.current}`,
+        id: current.dataCounterRef.current,
+        timestamp: new Date().toISOString().slice(11, 23),
+        ...message.payload
+      };
+      
+      current.dataCounterRef.current += 1;
+      
+      // 更新当前页面的数据
+      setPages(prevPages => 
+        prevPages.map(page => 
+          page.id === activePageId 
+            ? { 
+                ...page, 
+                data: [processedData, ...page.data].slice(0, 10000),
+                filteredData: [processedData, ...page.filteredData].slice(0, 10000)
+              } 
+            : page
+        )
+      );
     } else if (message.type === 'error') {
       message.error(message.message);
     } else {
       console.log('收到其他类型消息:', message);
     }
-  };
+  }, [pages, activePageId, addData, setPages]);
 
   // 启动捕获函数
   const startCapture = () => {
@@ -221,6 +308,38 @@ const App = () => {
         }, 100); // 稍微延迟以确保连接完全建立
       });
     }
+  };
+
+  // 添加新页面 (由 PageManager 调用)
+  const handleCreatePage = (newPage) => {
+    setPages(prevPages => [...prevPages, newPage]);
+    setActivePageId(newPage.id);
+  };
+
+  // 关闭页面
+  const closePage = (pageId) => {
+    // 至少保留一个页面
+    if (pages.length <= 1) {
+      message.warning('至少需要保留一个页面');
+      return;
+    }
+    
+    // 如果关闭的是当前激活的页面，需要切换到另一个页面
+    if (pageId === activePageId) {
+      const remainingPages = pages.filter(page => page.id !== pageId);
+      setActivePageId(remainingPages[0].id);
+    }
+    
+    setPages(prevPages => prevPages.filter(page => page.id !== pageId));
+  };
+
+  // 重命名页面
+  const renamePage = (pageId, newName) => {
+    setPages(prevPages => 
+      prevPages.map(page => 
+        page.id === pageId ? { ...page, name: newName } : page
+      )
+    );
   };
 
   const columns = [
@@ -300,19 +419,58 @@ const App = () => {
           setHookConfigs={setHookConfigs}
           sendHookConfig={sendHookConfig}
           form={form}
-          setSearchText={setSearchText}
-          onFilterChange={handleFilterChange}
         />
         
-        <DataTable
-          windowSize={windowSize}
-          data={data}
-          isCapturing={isCapturing}
-          filteredData={filteredData}
-          columns={columns}
-          searchText={searchText}
-          setSearchText={setSearchText}
-        />
+        <Layout>
+          {/* 页面标签栏 */}
+          <div style={{ 
+            backgroundColor: '#fff', 
+            padding: '0 12px',
+            borderBottom: '1px solid #e8e8e8',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Tabs
+              activeKey={String(activePageId)}
+              type="editable-card"
+              onChange={(key) => setActivePageId(parseInt(key))}
+              onEdit={(targetKey, action) => {
+                if (action === 'add') {
+                  // 不再直接添加，而是通过PageManager处理
+                } else if (action === 'remove') {
+                  closePage(parseInt(targetKey));
+                }
+              }}
+              tabBarGutter={8}
+              tabBarStyle={{ margin: 0, flex: 1 }}
+            >
+              {pages.map(page => (
+                <TabPane
+                  tab={`${page.typeName} - ${page.name}`}
+                  key={String(page.id)}
+                  closable={pages.length > 1 || page.id !== 1} // 保证至少有一个页面不能关闭
+                />
+              ))}
+            </Tabs>
+            <div style={{ marginLeft: 8 }}>
+              <PageManager 
+                onPageCreate={handleCreatePage} 
+                windowSize={windowSize}
+              />
+            </div>
+          </div>
+          
+          <DataTable
+            windowSize={windowSize}
+            data={currentPage.data}
+            filteredData={currentPage.filteredData}
+            isCapturing={isCapturing}
+            searchText={searchText}
+            setSearchText={setSearchText}
+            columns={columns || []}
+            pageType={currentPage?.type || 'frida-monitor'}
+          />
+        </Layout>
       </Layout>
     </Layout>
   );

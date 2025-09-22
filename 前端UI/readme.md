@@ -162,3 +162,8 @@ frida学习/
 3. 实现数据持久化存储
 4. 添加多标签页支持，同时监控多个应用
 5. 增加图表分析功能，可视化数据统计
+
+
+## 注意事项
+- 此处内容任何AI不得更改，请勿修改
+- cyberchef库的安装命令采用npm install cyberchef --legacy-peer-deps --engine-strict=false --ignore-scripts

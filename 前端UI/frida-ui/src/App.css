@@ -16,9 +16,10 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: #fff;
   padding: 20px;
-  color: white;
+  color: rgba(0, 0, 0, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .App-link {
@@ -32,6 +33,36 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 页面标签样式优化 */
+.ant-tabs-nav {
+  margin: 0 !important;
+}
+
+.ant-tabs-tab {
+  padding: 8px 16px !important;
+  background: #f5f5f5 !important;
+  border: 1px solid #e8e8e8 !important;
+  border-radius: 4px 4px 0 0 !important;
+  margin-right: 2px !important;
+}
+
+.ant-tabs-tab-active {
+  background: #fff !important;
+  border-bottom: 1px solid #fff !important;
+  font-weight: bold;
+}
+
+.ant-tabs-tab-btn {
+  font-size: 14px;
+}
+
+.ant-tabs-nav-add {
+  margin-left: 8px !important;
+  border: 1px solid #e8e8e8 !important;
+  background: #f5f5f5 !important;
+  border-radius: 4px 4px 0 0 !important;
 }
 
 .ant-table-small .ant-table-content {
@@ -58,6 +89,16 @@
   
   .ant-layout-header > div > * {
     margin-bottom: 8px;
+  }
+  
+  /* 页面标签在小屏幕上的优化 */
+  .ant-tabs-tab {
+    padding: 6px 12px !important;
+    font-size: 12px;
+  }
+  
+  .ant-tabs-tab-btn {
+    font-size: 12px;
   }
 }
 
@@ -95,12 +136,27 @@
   .ant-form-item-label > label {
     font-size: 12px;
   }
+  
+  /* 页面标签在小屏幕上的进一步优化 */
+  .ant-tabs-tab {
+    padding: 4px 8px !important;
+    font-size: 11px;
+  }
+  
+  .ant-tabs-nav-add {
+    padding: 4px 8px !important;
+    font-size: 11px;
+  }
 }
 
 /* 中等屏幕设备优化 */
 @media (min-width: 577px) and (max-width: 992px) {
   .ant-layout-content {
     padding: 16px !important;
+  }
+  
+  .ant-tabs-tab-btn {
+    font-size: 13px;
   }
 }
 

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, nativeTheme } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -310,6 +310,9 @@ function createMenu(mainWindow) {
 
 // 当Electron完成初始化并准备创建浏览器窗口时调用此方法
 app.whenReady().then(() => {
+  // 强制使用浅色主题
+  nativeTheme.themeSource = 'light';
+  
   // 启动WebSocket服务器
   startServer();
   

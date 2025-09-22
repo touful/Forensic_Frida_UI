@@ -1,0 +1,184 @@
+[
+    {
+      "class": "android.util.Log",
+      "method": "d",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "记录DEBUG级别日志，输出序列化操作的各个阶段结果（如Base64编码字符串、JSON结构、自定义序列化格式等），是主要的数据痕迹输出点。"
+    },
+    {
+      "class": "android.util.Log",
+      "method": "e",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "记录ERROR级别日志，包含序列化过程中发生的异常（如IOException, JSONException, ClassNotFoundException），及其完整堆栈，用于错误场景取证。"
+    },
+    {
+      "class": "android.util.Base64",
+      "method": "encodeToString",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "将字节数组编码为Base64字符串，其结果被记录到日志中，暴露了Java原生序列化或文本编码后的数据内容。"
+    },
+    {
+      "class": "android.util.Base64",
+      "method": "decode",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "将Base64字符串解码为字节数组，虽然不直接输出，但其结果用于后续反序列化或解码操作，是数据还原的关键步骤。"
+    },
+    {
+      "class": "java.io.ObjectOutputStream",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "构造ObjectOutputStream对象，用于启动Java原生序列化过程，是序列化操作的起点。"
+    },
+    {
+      "class": "java.io.ObjectOutputStream",
+      "method": "writeObject",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "执行Java原生序列化，将对象（如Person）写入流中，生成的字节数据随后被Base64编码并记录到日志。"
+    },
+    {
+      "class": "java.io.ObjectInputStream",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "构造ObjectInputStream对象，用于启动Java原生反序列化过程。"
+    },
+    {
+      "class": "java.io.ObjectInputStream",
+      "method": "readObject",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "执行Java原生反序列化，从流中读取并重建对象，反序列化后的对象信息被记录到日志中。"
+    },
+    {
+      "class": "org.json.JSONObject",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "构造JSONObject对象，用于创建或解析JSON数据结构，其内容最终被序列化为字符串并记录。"
+    },
+    {
+      "class": "org.json.JSONObject",
+      "method": "put",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "向JSONObject中添加键值对，构建JSON数据结构，这些数据最终会被记录到日志中。"
+    },
+    {
+      "class": "org.json.JSONObject",
+      "method": "toString",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "将JSONObject序列化为格式化的JSON字符串，该字符串被直接记录到日志中，暴露完整的数据结构。"
+    },
+    {
+      "class": "org.json.JSONObject",
+      "method": "getString",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "从JSONObject中解析并获取字符串值，解析结果被记录到日志中，构成数据提取痕迹。"
+    },
+    {
+      "class": "org.json.JSONObject",
+      "method": "getInt",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "从JSONObject中解析并获取整数值，解析结果被记录到日志中。"
+    },
+    {
+      "class": "org.json.JSONObject",
+      "method": "getJSONArray",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "从JSONObject中解析并获取JSONArray对象，用于进一步处理数组数据，相关信息被记录到日志。"
+    },
+    {
+      "class": "org.json.JSONArray",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "构造JSONArray对象，用于创建或解析JSON数组。"
+    },
+    {
+      "class": "org.json.JSONArray",
+      "method": "put",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "向JSONArray中添加元素，构建JSON数组结构，这些数据最终会被记录到日志中。"
+    },
+    {
+      "class": "org.json.JSONArray",
+      "method": "toString",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "将JSONArray序列化为JSON字符串，该字符串被记录到日志中。"
+    },
+    {
+      "class": "org.json.JSONArray",
+      "method": "getJSONObject",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "从JSONArray中获取指定索引的JSONObject，用于遍历和解析列表数据，解析结果被记录到日志。"
+    },
+    {
+      "class": "org.json.JSONArray",
+      "method": "length",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "获取JSONArray的长度，该数值信息被记录到日志中，反映数据规模。"
+    },
+    {
+      "class": "java.lang.String",
+      "method": "getBytes",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "将字符串编码为字节数组（UTF-8），用于Base64编码前的准备，是数据转换的关键步骤。"
+    },
+    {
+      "class": "java.lang.String",
+      "method": "<init>",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "使用字节数组和字符集构造字符串，用于Base64解码后的数据还原，还原结果被记录到日志。"
+    },
+    {
+      "class": "java.util.HashMap",
+      "method": "put",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "向HashMap中添加键值对，构建待序列化的Map数据结构，其内容最终被转换为JSON并记录。"
+    },
+    {
+      "class": "java.util.ArrayList",
+      "method": "add",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "向ArrayList中添加元素，构建爱好列表或用户列表，这些数据最终被序列化并记录到日志中。"
+    },
+    {
+      "class": "com.example.testoffridalab.SerializationOperationHelper$Person",
+      "method": "customSerialize",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "执行自定义序列化逻辑，将Person对象转换为特定格式的字符串（如'name|age|job|hobby1,hobby2'），该字符串被记录到日志中。"
+    },
+    {
+      "class": "com.example.testoffridalab.SerializationOperationHelper$Person",
+      "method": "customDeserialize",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "执行自定义反序列化逻辑，从特定格式字符串重建Person对象，重建结果被记录到日志中。"
+    },
+    {
+      "class": "com.example.testoffridalab.SerializationOperationHelper$Person",
+      "method": "toString",
+      "avoid_args": [],
+      "avoid_returns": [],
+      "description": "返回Person对象的字符串表示，包含姓名、年龄、职业和爱好，该信息在日志和反序列化结果中被多次记录。"
+    }
+  ]

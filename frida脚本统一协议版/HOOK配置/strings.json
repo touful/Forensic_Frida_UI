@@ -1,8 +1,246 @@
 [
   {
-    "class": "java.lang.StringFactory",
-    "method": "newStringFromString",
+    "class": "android.util.Log",
+    "method": "e",
     "avoid_args": [],
-    "avoid_returns": []
+    "avoid_returns": [],
+    "description": "输出大量字符串操作结果，包括原始数据、编码结果、哈希值、正则匹配、格式化内容等，是主要的取证痕迹输出点。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "getBytes",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "将字符串转为字节数组，用于后续Base64或哈希操作，是数据转换的关键步骤，可能暴露原始明文。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "<init>",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "从字节数组重建字符串（如Base64解码后），还原数据内容并被日志记录，构成数据还原痕迹。"
+  },
+  {
+    "class": "java.lang.StringBuilder",
+    "method": "reverse",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "执行字符串反转操作，结果被日志记录，暴露原始字符串内容的变形。"
+  },
+  {
+    "class": "java.lang.StringBuilder",
+    "method": "insert",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "在指定位置插入字符，构建最终字符串，其内容被完整记录到日志中。"
+  },
+  {
+    "class": "java.lang.StringBuilder",
+    "method": "delete",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "删除指定区间字符，修改字符串结构，操作结果被日志捕获。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "format",
+    "avoid_returns": [],
+    "avoid_args": [],
+    "description": "格式化字符串（如姓名、年龄、身高），构造包含用户数据的消息，被完整记录到日志中。"
+  },
+  {
+    "class": "java.util.regex.Pattern",
+    "method": "compile",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "编译正则表达式（如邮箱、数字提取），用于后续匹配，其模式和目标文本可能暴露敏感数据结构。"
+  },
+  {
+    "class": "java.util.regex.Matcher",
+    "method": "find",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "查找正则匹配项（如从文本提取数字），匹配结果被拼接并记录，暴露数据提取逻辑与内容。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "split",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "按分隔符分割字符串（如按空格），结果数组被日志记录，暴露原始文本结构。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "join",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "用分隔符连接字符串数组，生成新字符串并记录，暴露数据重组行为。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "toUpperCase",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "转为大写，结果被记录，可能用于标准化或本地化处理痕迹。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "toLowerCase",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "转为小写，结果被记录，可能用于查询或匹配前处理。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "replace",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "替换子字符串（如fox→cat），结果被完整记录，暴露文本修改意图。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "replaceAll",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "正则全局替换（如the→a），修改后内容被日志捕获，暴露语义修改行为。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "replaceFirst",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "替换首个匹配项，结果被记录，暴露局部文本修正行为。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "substring",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "截取子串（如索引10-25），暴露原始字符串片段，可能包含敏感信息。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "indexOf",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "查找子串位置（如' sample '），结果被记录，暴露文本结构分析行为。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "lastIndexOf",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "从后往前查找字符位置（如'i'），暴露逆向分析或截取意图。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "startsWith",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "判断是否以某字符串开头（如'This'），结果被记录，暴露条件判断逻辑。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "endsWith",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "判断是否以某字符串结尾（如'ching'），结果被记录，暴露文本边界分析。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "contains",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "判断是否包含子串（如'text'），结果被记录，暴露关键词检测行为。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "trim",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "去除两端空格，清理后字符串被记录，暴露数据清洗痕迹。"
+  },
+  {
+    "class": "android.util.Base64",
+    "method": "encodeToString",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "将字节数组编码为Base64字符串，结果被完整记录，暴露编码后数据内容。"
+  },
+  {
+    "class": "android.util.Base64",
+    "method": "decode",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "将Base64字符串解码为字节数组，用于还原原始数据，是逆向解码关键步骤。"
+  },
+  {
+    "class": "java.security.MessageDigest",
+    "method": "getInstance",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "获取哈希算法实例（如SHA-256），启动哈希计算流程。"
+  },
+  {
+    "class": "java.security.MessageDigest",
+    "method": "digest",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "计算输入数据的哈希值（如SHA-256），结果被格式化并记录，暴露数据指纹。"
+  },
+  {
+    "class": "java.util.UUID",
+    "method": "randomUUID",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "生成随机UUID，结果被记录，可用于追踪会话、设备或操作唯一标识。"
+  },
+  {
+    "class": "java.text.Normalizer",
+    "method": "normalize",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "对Unicode字符串进行规范化（NFD/NFC），结果被记录，暴露字符编码处理行为。"
+  },
+  {
+    "class": "java.util.Locale",
+    "method": "getDefault",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "获取默认区域设置，结果被记录，暴露设备本地化环境信息。"
+  },
+  {
+    "class": "java.util.Locale",
+    "method": "forLanguageTag",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "根据语言标签创建Locale（如'tr'），用于本地化大小写转换，暴露多语言处理痕迹。"
+  },  {
+    "class": "java.lang.String",
+    "method": "compareTo",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "比较两个字符串字典序，结果被日志记录，暴露字符串内容差异或排序逻辑。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "equals",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "判断字符串内容是否相等，结果被日志记录，暴露条件判断或验证逻辑。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "matches",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "执行正则全串匹配（如是否匹配'hello'），结果被记录，暴露模式验证行为。"
+  },
+  {
+    "class": "java.lang.String",
+    "method": "length",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "获取字符串长度，结果被记录（如'13'），暴露数据规模或结构特征。"
   }
 ]

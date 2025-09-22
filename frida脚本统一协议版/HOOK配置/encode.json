@@ -1,0 +1,65 @@
+[
+  {
+    "class": "javax.crypto.Cipher",
+    "method": "doFinal",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获加密/解密输入输出：明文 -> 密文，或 密文 -> 明文"
+  },
+  {
+    "class": "javax.crypto.Cipher",
+    "method": "init",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获密钥和 IV 初始化过程，可提取 SecretKey 和 IvParameterSpec"
+  },
+  {
+    "class": "javax.crypto.KeyGenerator",
+    "method": "generateKey",
+    "avoid_args": [],
+    "avoid_returns": ["[B"],
+    "description": "捕获生成的对称密钥（如 AES、3DES 密钥）"
+  },
+  {
+    "class": "javax.crypto.SecretKeyFactory",
+    "method": "generateSecret",
+    "avoid_args": [],
+    "avoid_returns": ["[B"],
+    "description": "捕获通过口令派生的密钥（如 DESKeySpec 生成的密钥）"
+  },
+  {
+    "class": "javax.crypto.spec.SecretKeySpec",
+    "method": "<init>",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获直接通过字节数组创建的密钥（如 RC4、HMAC）"
+  },
+  {
+    "class": "javax.crypto.Mac",
+    "method": "doFinal",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获 HMAC 输出"
+  },
+  {
+    "class": "javax.crypto.Mac",
+    "method": "init",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获 HMAC 使用的密钥"
+  },
+  {
+    "class": "java.security.MessageDigest",
+    "method": "digest",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获哈希算法输入与输出（如 MD5、SHA）"
+  },
+  {
+    "class": "java.security.SecureRandom",
+    "method": "nextBytes",
+    "avoid_args": [],
+    "avoid_returns": [],
+    "description": "捕获 IV 或随机数生成，可能用于 CBC 模式"
+  }
+]
