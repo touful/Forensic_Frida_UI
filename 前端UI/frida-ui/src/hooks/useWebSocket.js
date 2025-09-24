@@ -1,4 +1,7 @@
 import { useRef, useState } from 'react';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('WebSocket');
 
 export const useWebSocket = () => {
   const ws = useRef(null);
@@ -12,35 +15,33 @@ export const useWebSocket = () => {
       ws.current = new WebSocket('ws://localhost:8080');
       
       ws.current.onopen = () => {
-        console.log('WebSocket连接已建立');
+        logger.info('WebSocket连接已建立');
         setConnectionStatus('已连接');
         setIsCapturing(true);
         if (onConnect) onConnect();
       };
       
       ws.current.onmessage = (event) => {
-        console.log('收到WebSocket消息:', event.data);
         try {
           const message = JSON.parse(event.data);
           if (onMessage) onMessage(message);
         } catch (e) {
-          console.error('解析数据错误:', e);
+          logger.error('解析数据错误:', e);
         }
       };
       
       ws.current.onclose = () => {
-        console.log('WebSocket连接已关闭');
         setConnectionStatus('已断开');
         setIsCapturing(false);
       };
       
       ws.current.onerror = (error) => {
-        console.error('WebSocket错误:', error);
+        logger.error('WebSocket错误:', error);
         setConnectionStatus('连接错误');
         setIsCapturing(false);
       };
     } catch (e) {
-      console.error('WebSocket连接失败:', e);
+      logger.error('WebSocket连接失败:', e);
       setConnectionStatus('连接失败');
     }
   };

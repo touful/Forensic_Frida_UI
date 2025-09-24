@@ -20,7 +20,13 @@ export const getDefaultColumns = (windowSize) => [
     className: 'method-column',
     width: windowSize && windowSize.width < 576 ? 150 : 250,
     ellipsis: true,
-    render: (text) => <Tag color="blue">{text}</Tag>
+    render: (text) => <Tag color="blue" style={{ 
+      maxWidth: '100%', 
+      overflow: 'hidden', 
+      textOverflow: 'ellipsis', 
+      whiteSpace: 'nowrap', 
+      display: 'block' 
+    }}>{text}</Tag>
   },
   {
     title: '参数',
@@ -29,11 +35,15 @@ export const getDefaultColumns = (windowSize) => [
     width: windowSize && windowSize.width < 576 ? 150 : 200,
     ellipsis: true,
     render: (args) => (
-      <div>
+      <div style={{ 
+        maxHeight: '40px', 
+        overflow: 'hidden',
+        textOverflow: 'ellipsis'
+      }}>
         {args && args.length > 0 ? (
           args.map((arg, index) => (
             <div key={index} style={{ 
-              maxWidth: 300, 
+              maxWidth: '100%', 
               overflow: 'hidden', 
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
@@ -52,6 +62,12 @@ export const getDefaultColumns = (windowSize) => [
     dataIndex: 'returns',
     className: 'returns-column',
     width: windowSize && windowSize.width < 576 ? 150 : 200,
-    ellipsis: true
+    ellipsis: true,
+    render: (text) => <div style={{ 
+      maxWidth: '100%', 
+      overflow: 'hidden', 
+      textOverflow: 'ellipsis', 
+      whiteSpace: 'nowrap' 
+    }}>{String(text)}</div>
   }
 ];

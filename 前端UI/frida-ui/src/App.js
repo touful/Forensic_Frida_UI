@@ -1,18 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Layout, Form, message, Tabs } from 'antd';
-import DataFilter from './components/DataFilter';
+import React, { useState, useEffect, useRef } from 'react';
+import { Form, Layout } from 'antd';
 import AppHeader from './components/AppComponents/Header';
 import Sidebar from './components/AppComponents/Sidebar';
 import DataTable from './components/AppComponents/DataTable';
-import PageManager from './components/AppComponents/PageManager';
-import { DEFAULT_HOOK_CONFIG, DEFAULT_TARGET_PACKAGE, DEFAULT_DEVICE_ID } from './utils/constants';
+import PageTabs from './components/AppComponents/PageTabs';
+import { DEFAULT_TARGET_PACKAGE, DEFAULT_DEVICE_ID } from './utils/constants';
 import { useDataHandling } from './hooks/useDataHandling';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useConfigFiles } from './hooks/useConfigFiles';
+import { useFridaData } from './hooks/useFridaData';
+import { usePageManager } from './hooks/usePageManager';
+import { useCSVHandler } from './hooks/useCSVHandler';
+import { useCapture } from './hooks/useCapture';
+import { createLogger } from './utils/logger';
 import './App.css';
 
 const { ipcRenderer } = window.require('electron');
-const { TabPane } = Tabs;
+const logger = createLogger('App');
 
 const App = () => {
   const [windowSize, setWindowSize] = useState({
@@ -24,94 +28,149 @@ const App = () => {
   const [targetPackage, setTargetPackage] = useState(DEFAULT_TARGET_PACKAGE);
   const [deviceId, setDeviceId] = useState(DEFAULT_DEVICE_ID);
   
-  // 页面管理状态
-  const [pages, setPages] = useState([
-    { 
-      id: 1, 
-      name: 'Frida监控', 
-      type: 'frida-monitor',
-      typeName: 'Frida监控',
-      data: [], 
-      filteredData: [],
-      dataCounterRef: useRef(0)
-    }
-  ]);
-  const [activePageId, setActivePageId] = useState(1);
+  // 添加缺失的模态框状态变量
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [modalWidth, setModalWidth] = useState(800);
   
   const isMounted = useRef(true);
   
-  // 获取当前页面
-  const currentPage = pages.find(page => page.id === activePageId) || pages[0];
-  
-  
-  // 使用拆分的hooks - 使用当前页面的数据
+  // 使用拆分的hooks
   const {
-    // 状态
-    data,
-    setData,
-    filteredData,
-    setFilteredData,
     searchText,
     setSearchText,
     filterConditions,
     setFilterConditions,
-    
-    // 函数
-    addData,
-    handleFilterChange
+    clearData: clearGeneralData
   } = useDataHandling(isMounted);
   
-  // 清空数据（整合页面数据和状态管理）
-  const clearData = () => {
-    // 更新当前页面的数据
-    setPages(prevPages => 
-      prevPages.map(page => 
-        page.id === activePageId 
-          ? { ...page, data: [], filteredData: [] } 
-          : page
-      )
-    );
-    
-    // 重置计数器
-    if (currentPage && currentPage.dataCounterRef) {
-      currentPage.dataCounterRef.current = 0;
-    }
-  };
-
-  // 初始化时设置当前页面数据
-  useEffect(() => {
-    if (currentPage) {
-      setData(currentPage.data);
-      setFilteredData(currentPage.filteredData);
-    }
-  }, [currentPage, setData, setFilteredData]);
+  const {
+    fridaData,
+    setFridaData,
+    fridaFilteredData,
+    setFridaFilteredData,
+    addFridaData
+  } = useFridaData(isMounted);
   
   const {
-    // 状态
-    ws, // 添加ws引用
+    pages,
+    setPages,
+    activePageId,
+    setActivePageId,
+    currentPage,
+    addPage,
+    closePage
+  } = usePageManager();
+  
+  const {
+    handleExportToCSV,
+    handleImportFromCSV,
+    exportCSV,
+    importCSV
+  } = useCSVHandler(ipcRenderer);
+  
+  const {
+    ws,
     isCapturing,
     setIsCapturing,
     connectionStatus,
     setConnectionStatus,
-    
-    // 函数
     connectWebSocket,
     closeWebSocket
   } = useWebSocket();
   
   const {
-    // 状态
     configFiles,
     setConfigFiles,
     selectedConfig,
     setSelectedConfig,
     hookConfigs,
     setHookConfigs,
-    
-    // 函数
     getConfigFiles,
     loadConfigFileContent
   } = useConfigFiles(ipcRenderer, isMounted);
+  
+  const {
+    handleWebSocketMessage,
+    startCapture,
+    sendHookConfig
+  } = useCapture(ws, targetPackage, selectedConfig, deviceId, hookConfigs, addFridaData);
+
+  // 添加调试日志
+  useEffect(() => {
+    // 移除不必要的日志输出
+  }, [detailModalVisible]);
+  
+  // 当fridaData、searchText或filterConditions改变时，更新fridaFilteredData
+  useEffect(() => {
+    let filtered = [...fridaData];
+    
+    // 应用文本搜索
+    if (searchText) {
+      filtered = filtered.filter(item =>
+        item.method.includes(searchText) ||
+        item.args.some(arg => String(arg).includes(searchText)) ||
+        String(item.returns).includes(searchText)
+      );
+    }
+    
+    // 应用过滤条件
+    if (filterConditions) {
+      // 方法名过滤
+      if (filterConditions.method) {
+        filtered = filtered.filter(item => 
+          item.method.includes(filterConditions.method)
+        );
+      }
+      
+      // 参数过滤
+      if (filterConditions.args) {
+        filtered = filtered.filter(item =>
+          item.args.some(arg => String(arg).includes(filterConditions.args))
+        );
+      }
+      
+      // 返回值过滤
+      if (filterConditions.returns) {
+        filtered = filtered.filter(item =>
+          String(item.returns).includes(filterConditions.returns)
+        );
+      }
+    }
+    
+    setFridaFilteredData(filtered);
+  }, [fridaData, searchText, filterConditions, setFridaFilteredData]);
+  
+  // 清空数据（修复核心：直接更新useDataHandling状态并同步页面）
+  const clearData = () => {
+    logger.info('清空所有数据');
+    // 1. 立即清空useDataHandling管理的数据状态
+    clearGeneralData();
+
+    // 2. 清空全局Frida数据状态
+    setFridaData([]);
+    setFridaFilteredData([]);
+
+    // 3. 同时更新所有页面的数据存储
+    setPages(prevPages => 
+      prevPages.map(page => {
+        // 重置Frida监控页面数据
+        if (page.type === 'frida-monitor') {
+          return { 
+            ...page, 
+            data: [], 
+            filteredData: []
+          };
+        }
+        // 重置其他类型页面数据
+        return { 
+          ...page, 
+          data: [], 
+          filteredData: []
+        };
+      })
+    );
+  };
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -152,59 +211,7 @@ const App = () => {
       ipcRenderer.removeListener('request-export-data', handleExportRequest);
       ipcRenderer.removeListener('request-import-data', handleImportRequest);
     };
-  }, [data]);
-
-  // 处理导出到CSV
-  const handleExportToCSV = async () => {
-    try {
-      // 获取当前页面数据
-      const currentPage = pages.find(page => page.id === activePageId);
-      const exportData = currentPage ? currentPage.data : [];
-      
-      const result = await ipcRenderer.invoke('export-to-csv', exportData);
-      if (result.success) {
-        message.success(`数据已导出到: ${result.filePath}`);
-      } else {
-        message.error(result.message);
-      }
-    } catch (error) {
-      message.error(`导出失败: ${error.message}`);
-    }
-  };
-
-  // 处理从CSV导入
-  const handleImportFromCSV = async () => {
-    try {
-      const result = await ipcRenderer.invoke('import-from-csv');
-      if (result.success) {
-        // 确保数据格式正确
-        const validData = result.data.map((item, index) => ({
-          key: `${Date.now()}-${index}`,
-          id: item.id || index + 1,
-          timestamp: item.timestamp || new Date().toISOString().slice(11, 23),
-          method: item.method || '',
-          args: Array.isArray(item.args) ? item.args : [],
-          returns: item.returns || ''
-        }));
-        
-        // 更新当前页面数据
-        setPages(prevPages => 
-          prevPages.map(page => 
-            page.id === activePageId 
-              ? { ...page, data: validData, filteredData: validData } 
-              : page
-          )
-        );
-        
-        message.success(`成功从 ${result.filePath} 导入 ${validData.length} 条数据`);
-      } else {
-        message.error(result.message);
-      }
-    } catch (error) {
-      console.error('导入失败:', error);
-      message.error(`导入失败: ${error.message || '未知错误'}`);
-    }
-  };
+  }, []);
 
   // 初始化或刷新配置文件列表
   useEffect(() => {
@@ -213,90 +220,26 @@ const App = () => {
 
   // 当选中的配置文件改变时，读取配置文件内容
   useEffect(() => {
-    loadConfigFileContent(selectedConfig, configFiles);
-  }, [selectedConfig, configFiles]);
-
-  // WebSocket消息处理
-  const handleWebSocketMessage = useCallback((message) => {
-    console.log('收到WebSocket消息:', message);
-    if (message.type === 'frida_data') {
-      addData(message.payload);
-      
-      // 再次获取当前页面，因为可能在异步中发生变化
-      const current = pages.find(page => page.id === activePageId) || pages[0];
-      
-      // 确保dataCounterRef存在
-      if (!current.dataCounterRef) {
-        console.warn('dataCounterRef not initialized yet');
-        return; // 等待下一次消息或初始化完成
-      }
-      
-      // 确保数据包含id and timestamp
-      const processedData = {
-        key: `${Date.now()}-${Math.random()}-${current.dataCounterRef.current}`,
-        id: current.dataCounterRef.current,
-        timestamp: new Date().toISOString().slice(11, 23),
-        ...message.payload
-      };
-      
-      current.dataCounterRef.current += 1;
-      
-      // 更新当前页面的数据
-      setPages(prevPages => 
-        prevPages.map(page => 
-          page.id === activePageId 
-            ? { 
-                ...page, 
-                data: [processedData, ...page.data].slice(0, 10000),
-                filteredData: [processedData, ...page.filteredData].slice(0, 10000)
-              } 
-            : page
-        )
-      );
-    } else if (message.type === 'error') {
-      message.error(message.message);
-    } else {
-      console.log('收到其他类型消息:', message);
+    if (selectedConfig) {
+      loadConfigFileContent(selectedConfig, configFiles);
     }
-  }, [pages, activePageId, addData, setPages]);
+  }, [selectedConfig, configFiles, loadConfigFileContent]);
 
-  // 启动捕获函数
-  const startCapture = () => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      const message = {
-        type: "start_capture",
-        target: targetPackage,
-        configFile: selectedConfig,
-        deviceId: deviceId
-      };
-      console.log("发送启动捕获命令:", message);
-      ws.current.send(JSON.stringify(message));
-      console.log("发送启动捕获命令，配置文件:", selectedConfig);
-    } else {
-      console.log("WebSocket未连接，无法发送启动捕获命令");
-      console.log("WebSocket状态:", ws.current ? ws.current.readyState : "未初始化");
-      message.error("WebSocket未连接，无法发送启动捕获命令");
+  // 当hook配置改变时，自动发送到后端
+  useEffect(() => {
+    if (isCapturing && hookConfigs.length > 0) {
+      // 添加一个小延迟，避免频繁发送
+      const timer = setTimeout(() => {
+        sendHookConfig();
+      }, 500);
+      
+      return () => clearTimeout(timer);
     }
-  };
-
-  // 发送hook配置到后端
-  const sendHookConfig = () => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      const message = {
-        type: 'hook_config',
-        configs: hookConfigs
-      };
-      ws.current.send(JSON.stringify(message));
-      console.log('发送Hook配置:', hookConfigs);
-    } else {
-      console.log("WebSocket未连接，无法发送Hook配置");
-      message.error("WebSocket未连接，无法发送Hook配置");
-    }
-  };
+  }, [hookConfigs, isCapturing, sendHookConfig]);
 
   // 切换捕获状态
   const toggleCapture = () => {
-    console.log("切换捕获状态，当前状态:", isCapturing);
+    logger.info("切换捕获状态，当前状态:", isCapturing);
     if (isCapturing) {
       closeWebSocket();
     } else {
@@ -312,34 +255,14 @@ const App = () => {
 
   // 添加新页面 (由 PageManager 调用)
   const handleCreatePage = (newPage) => {
-    setPages(prevPages => [...prevPages, newPage]);
-    setActivePageId(newPage.id);
+    logger.info('创建新页面:', newPage.name);
+    addPage(newPage);
   };
 
   // 关闭页面
-  const closePage = (pageId) => {
-    // 至少保留一个页面
-    if (pages.length <= 1) {
-      message.warning('至少需要保留一个页面');
-      return;
-    }
-    
-    // 如果关闭的是当前激活的页面，需要切换到另一个页面
-    if (pageId === activePageId) {
-      const remainingPages = pages.filter(page => page.id !== pageId);
-      setActivePageId(remainingPages[0].id);
-    }
-    
-    setPages(prevPages => prevPages.filter(page => page.id !== pageId));
-  };
-
-  // 重命名页面
-  const renamePage = (pageId, newName) => {
-    setPages(prevPages => 
-      prevPages.map(page => 
-        page.id === pageId ? { ...page, name: newName } : page
-      )
-    );
+  const handleClosePage = (pageId) => {
+    logger.info('关闭页面 ID:', pageId);
+    closePage(pageId);
   };
 
   const columns = [
@@ -419,56 +342,35 @@ const App = () => {
           setHookConfigs={setHookConfigs}
           sendHookConfig={sendHookConfig}
           form={form}
+          onFilterChange={setFilterConditions} // 传递过滤条件设置函数
         />
         
         <Layout>
-          {/* 页面标签栏 */}
-          <div style={{ 
-            backgroundColor: '#fff', 
-            padding: '0 12px',
-            borderBottom: '1px solid #e8e8e8',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <Tabs
-              activeKey={String(activePageId)}
-              type="editable-card"
-              onChange={(key) => setActivePageId(parseInt(key))}
-              onEdit={(targetKey, action) => {
-                if (action === 'add') {
-                  // 不再直接添加，而是通过PageManager处理
-                } else if (action === 'remove') {
-                  closePage(parseInt(targetKey));
-                }
-              }}
-              tabBarGutter={8}
-              tabBarStyle={{ margin: 0, flex: 1 }}
-            >
-              {pages.map(page => (
-                <TabPane
-                  tab={`${page.typeName} - ${page.name}`}
-                  key={String(page.id)}
-                  closable={pages.length > 1 || page.id !== 1} // 保证至少有一个页面不能关闭
-                />
-              ))}
-            </Tabs>
-            <div style={{ marginLeft: 8 }}>
-              <PageManager 
-                onPageCreate={handleCreatePage} 
-                windowSize={windowSize}
-              />
-            </div>
-          </div>
+          <PageTabs
+            pages={pages}
+            activePageId={activePageId}
+            setActivePageId={setActivePageId}
+            closePage={handleClosePage}
+            onPageCreate={handleCreatePage}
+            windowSize={windowSize}
+          />
           
           <DataTable
             windowSize={windowSize}
-            data={currentPage.data}
-            filteredData={currentPage.filteredData}
+            data={currentPage.type === 'frida-monitor' ? fridaData : currentPage.data}
+            filteredData={currentPage.type === 'frida-monitor' ? fridaFilteredData : currentPage.filteredData}
             isCapturing={isCapturing}
             searchText={searchText}
             setSearchText={setSearchText}
             columns={columns || []}
             pageType={currentPage?.type || 'frida-monitor'}
+            // 传递详细信息模态框相关状态和函数
+            selectedRecord={selectedRecord}
+            setSelectedRecord={setSelectedRecord}
+            detailModalVisible={detailModalVisible}
+            setDetailModalVisible={setDetailModalVisible}
+            modalWidth={modalWidth}
+            setModalWidth={setModalWidth}
           />
         </Layout>
       </Layout>

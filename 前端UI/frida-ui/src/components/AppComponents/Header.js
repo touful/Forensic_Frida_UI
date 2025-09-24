@@ -24,7 +24,7 @@ const AppHeader = ({
       flexWrap: windowSize.width < 768 ? 'wrap' : 'nowrap'
     }}>
       <Title level={windowSize.width < 576 ? 4 : 3} style={{ color: 'white', margin: '12px 0' }}>
-        Frida Hook 数据监控工具
+        APP取证极速版
       </Title>
       
       <div style={{ 

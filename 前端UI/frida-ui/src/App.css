@@ -41,11 +41,12 @@
 }
 
 .ant-tabs-tab {
-  padding: 8px 16px !important;
+  padding: 6px 12px !important;
   background: #f5f5f5 !important;
   border: 1px solid #e8e8e8 !important;
   border-radius: 4px 4px 0 0 !important;
   margin-right: 2px !important;
+  height: 32px !important;
 }
 
 .ant-tabs-tab-active {
@@ -55,7 +56,7 @@
 }
 
 .ant-tabs-tab-btn {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .ant-tabs-nav-add {
@@ -63,6 +64,7 @@
   border: 1px solid #e8e8e8 !important;
   background: #f5f5f5 !important;
   border-radius: 4px 4px 0 0 !important;
+  height: 32px !important;
 }
 
 .ant-table-small .ant-table-content {
@@ -72,6 +74,11 @@
 .ant-table-small .ant-table-thead > tr > th,
 .ant-table-small .ant-table-tbody > tr > td {
   padding: 4px 8px;
+}
+
+/* 优化滚动性能 */
+.ant-table-body {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 优化顶部Header区域的响应式显示 */
@@ -93,12 +100,17 @@
   
   /* 页面标签在小屏幕上的优化 */
   .ant-tabs-tab {
-    padding: 6px 12px !important;
-    font-size: 12px;
+    padding: 4px 8px !important;
+    font-size: 11px;
+    height: 28px !important;
   }
   
   .ant-tabs-tab-btn {
-    font-size: 12px;
+    font-size: 11px;
+  }
+  
+  .ant-tabs-nav-add {
+    height: 28px !important;
   }
 }
 
@@ -139,13 +151,15 @@
   
   /* 页面标签在小屏幕上的进一步优化 */
   .ant-tabs-tab {
-    padding: 4px 8px !important;
-    font-size: 11px;
+    padding: 2px 6px !important;
+    font-size: 10px;
+    height: 24px !important;
   }
   
   .ant-tabs-nav-add {
-    padding: 4px 8px !important;
-    font-size: 11px;
+    padding: 2px 6px !important;
+    font-size: 10px;
+    height: 24px !important;
   }
 }
 
@@ -156,7 +170,7 @@
   }
   
   .ant-tabs-tab-btn {
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 

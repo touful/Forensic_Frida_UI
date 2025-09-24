@@ -5,11 +5,41 @@ const fs = require('fs');
 
 let serverProcess = null;
 
+// 日志级别定义
+const LOG_LEVELS = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3
+};
+
+// 当前日志级别
+const CURRENT_LOG_LEVEL = process.env.NODE_ENV === 'production' ? LOG_LEVELS.INFO : LOG_LEVELS.INFO;
+
+// 格式化日志时间
+function formatTime() {
+  return new Date().toISOString().slice(0, 23).replace('T', ' ');
+}
+
+// 日志输出函数
+function log(level, prefix, ...args) {
+  if (LOG_LEVELS[level] <= CURRENT_LOG_LEVEL) {
+    const timestamp = formatTime();
+    const logMessage = `[${timestamp}] [${level}] ${prefix}: ${args.join(' ')}`;
+    console.log(logMessage);
+  }
+}
+
+// 处理来自渲染进程的日志消息
+ipcMain.on('log-message', (event, { level, prefix, args }) => {
+  log(level, `Renderer[${prefix}]`, ...args);
+});
+
 // 处理获取项目根路径的请求
 ipcMain.handle('get-root-path', async (event, ...args) => {
   // 获取项目根目录（当前目录的上级目录）
   const rootPath = path.join(__dirname, '../..');
-  console.log('获取到的项目根路径:', rootPath);
+  // 仅在需要调试时输出日志
   return rootPath;
 });
 
@@ -41,7 +71,9 @@ ipcMain.handle('get-adb-devices', async (event, ...args) => {
     });
     
     if (exitCode !== 0) {
-      throw new Error(`ADB命令执行失败: ${stderrData}`);
+      const errorMsg = `ADB命令执行失败: ${stderrData}`;
+      log('ERROR', 'ADB', errorMsg);
+      throw new Error(errorMsg);
     }
     
     // 解析设备列表
@@ -62,7 +94,7 @@ ipcMain.handle('get-adb-devices', async (event, ...args) => {
     
     return { success: true, devices: devices };
   } catch (error) {
-    console.error('获取ADB设备列表时出错:', error);
+    log('ERROR', 'ADB', '获取ADB设备列表时出错:', error.message);
     return { success: false, error: error.message };
   }
 });
@@ -101,9 +133,10 @@ ipcMain.handle('export-to-csv', async (event, data) => {
     // 写入文件
     fs.writeFileSync(result.filePath, csvContent, 'utf8');
     
+    log('INFO', 'Export', '数据导出成功:', result.filePath);
     return { success: true, message: '数据导出成功', filePath: result.filePath };
   } catch (error) {
-    console.error('导出CSV时出错:', error);
+    log('ERROR', 'Export', '导出CSV时出错:', error.message);
     return { success: false, message: `导出失败: ${error.message}` };
   }
 });
@@ -133,14 +166,16 @@ ipcMain.handle('import-from-csv', async (event) => {
     
     // 检查是否有内容
     if (lines.length < 1) {
-      return { success: false, message: 'CSV文件为空' };
+      const errorMsg = 'CSV文件为空';
+      return { success: false, message: errorMsg };
     }
     
     const headers = lines[0].split(',');
     
     // 检查头部是否符合预期格式
     if (headers.length < 5) {
-      return { success: false, message: 'CSV文件格式不正确，列数不足' };
+      const errorMsg = 'CSV文件格式不正确，列数不足';
+      return { success: false, message: errorMsg };
     }
     
     const data = [];
@@ -168,7 +203,6 @@ ipcMain.handle('import-from-csv', async (event) => {
               args = [];
             }
           } catch (e) {
-            console.warn('解析参数时出错:', e);
             args = [];
           }
           
@@ -186,15 +220,15 @@ ipcMain.handle('import-from-csv', async (event) => {
           
           data.push(item);
         } catch (lineError) {
-          console.warn(`解析第${i + 1}行时出错:`, lineError);
           // 跳过这一行但继续处理其他行
         }
       }
     }
     
+    log('INFO', 'Import', '数据导入成功，共导入', data.length, '条记录');
     return { success: true, message: '数据导入成功', data: data, filePath: result.filePaths[0] };
   } catch (error) {
-    console.error('导入CSV时出错:', error);
+    log('ERROR', 'Import', '导入CSV时出错:', error.message);
     return { success: false, message: `导入失败: ${error.message || '未知错误'}` };
   }
 });
@@ -204,6 +238,7 @@ function createWindow () {
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    backgroundColor: '#fff',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -213,7 +248,7 @@ function createWindow () {
   });
 
   // 加载应用的index.html
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile('dist/index.html');
 
   // 打开开发工具
   // mainWindow.webContents.openDevTools();

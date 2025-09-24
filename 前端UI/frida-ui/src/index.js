@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom';
 import App from './App';
 import './App.css';
 
+// 启用React的并发模式（如果可用）
+const rootElement = document.getElementById('root');
+
 // 添加错误边界
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -40,9 +43,26 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-ReactDOM.render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>,
-  document.getElementById('root')
-);
+// 启用生产环境优化
+if (process.env.NODE_ENV === 'production') {
+  // 禁用开发警告
+  console.disableYellowBox = true;
+}
+
+// 使用createRoot API (React 18+) 如果可用
+if (ReactDOM.createRoot) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+} else {
+  // 兼容旧版本React
+  ReactDOM.render(
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>,
+    rootElement
+  );
+}

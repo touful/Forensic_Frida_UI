@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Card, Form, Input, Button, Select, Collapse, Tag, Modal, List, message } from 'antd';
+import { Layout, Card, Form, Input, Button, Select, Collapse, Tag, Modal, List, message, Typography } from 'antd';
 import { RocketOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import DataFilter from '../DataFilter';
 
@@ -7,6 +7,7 @@ const { ipcRenderer } = window.require('electron');
 const { Sider } = Layout;
 const { Panel } = Collapse;
 const { Option } = Select;
+const { Text } = Typography;
 
 const Sidebar = ({ 
   windowSize,
@@ -23,7 +24,6 @@ const Sidebar = ({
   setHookConfigs,
   sendHookConfig,
   form,
-  setSearchText,
   onFilterChange
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -38,7 +38,8 @@ const Sidebar = ({
       class: "",
       method: "",
       avoid_args: [],
-      avoid_returns: []
+      avoid_returns: [],
+      description: "" // 添加description字段
     };
     setHookConfigs([...hookConfigs, newConfig]);
   };
@@ -98,6 +99,22 @@ const Sidebar = ({
       setUseCustomDeviceId(false);
       setDeviceId(value);
     }
+  };
+
+  // 截断类名，前缀显示省略号
+  const truncateClassPrefix = (className, maxLength = 20) => {
+    if (!className || className.length <= maxLength) {
+      return className;
+    }
+    return '...' + className.slice(-(maxLength - 3));
+  };
+
+  // 截断描述信息，后缀显示省略号
+  const truncateDescriptionSuffix = (description, maxLength = 35) => {
+    if (!description || description.length <= maxLength) {
+      return description;
+    }
+    return description.slice(0, maxLength - 3) + '...';
   };
 
   return (
@@ -195,20 +212,27 @@ const Sidebar = ({
           </Form>
         </Card>
         
-        <Card title="搜索和过滤" size="small" style={{ marginBottom: 16 }}>
-          <Form layout="vertical">
-            <Form.Item label="搜索">
-              <Input
-                placeholder="搜索方法、参数或返回值"
-                onChange={e => setSearchText(e.target.value)}
-                size={windowSize.width < 576 ? 'small' : 'middle'}
-              />
-            </Form.Item>
-          </Form>
+        <Card title="过滤" size="small" style={{ marginBottom: 16 }}>
           <DataFilter onFilterChange={onFilterChange} />
         </Card>
         
         <Card title="Hook配置" size="small">
+          <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+            <Button 
+              type="primary" 
+              onClick={sendHookConfig}
+              size={windowSize.width < 576 ? 'small' : 'middle'}
+              block
+            >
+              应用Hook配置
+            </Button>
+            <Button 
+              onClick={addHookConfig}
+              icon={<PlusOutlined />}
+              size={windowSize.width < 576 ? 'small' : 'middle'}
+            />
+          </div>
+          
           <Collapse defaultActiveKey={['1']}>
             <Panel header="配置Hook类和方法" key="1">
               <Form form={form} layout="vertical">
@@ -217,7 +241,10 @@ const Sidebar = ({
                     <Card 
                       size="small" 
                       key={index} 
-                      style={{ marginBottom: 16 }}
+                      style={{ 
+                        marginBottom: 12,
+                        maxWidth: '100%' // 控制卡片最大宽度
+                      }}
                       onClick={() => showConfigDetails(config)}
                       hoverable
                     >
@@ -225,17 +252,44 @@ const Sidebar = ({
                         <Tag color="blue" style={{ marginRight: 8 }}>
                           {index + 1}
                         </Tag>
-                        <div>
-                          <div style={{ fontWeight: 500 }}>
-                            {config.class}.{config.method}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ 
+                            fontWeight: 500,
+                            fontSize: '12px', // 减小字体大小
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {truncateClassPrefix(`${config.class}.${config.method}`, 30)}
                           </div>
+                          {config.description && (
+                            <div style={{ 
+                              fontSize: '11px', // 进一步减小描述字体大小
+                              color: '#666', 
+                              marginTop: 4,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {truncateDescriptionSuffix(config.description, 35)}
+                            </div>
+                          )}
                           {(config.avoid_args && config.avoid_args.length > 0) || 
                            (config.avoid_returns && config.avoid_returns.length > 0) ? (
-                            <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
+                            <div style={{ fontSize: '11px', color: '#666', marginTop: 4 }}>
                               点击查看详情
                             </div>
                           ) : null}
                         </div>
+                        <Button 
+                          type="text" 
+                          icon={<DeleteOutlined />} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeHookConfig(index);
+                          }}
+                          size="small"
+                        />
                       </div>
                     </Card>
                   ))
@@ -265,18 +319,26 @@ const Sidebar = ({
               bordered
               dataSource={[
                 { label: '类名', value: selectedConfigDetails.class },
-                { label: '方法名', value: selectedConfigDetails.method }
+                { label: '方法名', value: selectedConfigDetails.method },
+                { label: '描述', value: selectedConfigDetails.description }
               ]}
               renderItem={item => (
                 <List.Item>
-                  <strong>{item.label}:</strong> {item.value}
+                  <div>
+                    <div><strong>{item.label}:</strong></div>
+                    {item.label === '描述' && item.value ? (
+                      <Text style={{ whiteSpace: 'pre-wrap', fontSize: '12px' }}>{item.value}</Text>
+                    ) : (
+                      <span style={{ fontSize: '12px' }}>{item.value}</span>
+                    )}
+                  </div>
                 </List.Item>
               )}
             />
             
             {selectedConfigDetails.avoid_args && selectedConfigDetails.avoid_args.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <h4>避免参数:</h4>
+                <h4 style={{ fontSize: '14px' }}>避免参数:</h4>
                 <List
                   size="small"
                   bordered
@@ -286,13 +348,13 @@ const Sidebar = ({
                       <div>
                         <div><strong>规则 {index + 1}:</strong></div>
                         {item.front && item.front.length > 0 && (
-                          <div>前缀匹配: {item.front.join(', ')}</div>
+                          <div style={{ fontSize: '12px' }}>前缀匹配: {item.front.join(', ')}</div>
                         )}
                         {item.back && item.back.length > 0 && (
-                          <div>后缀匹配: {item.back.join(', ')}</div>
+                          <div style={{ fontSize: '12px' }}>后缀匹配: {item.back.join(', ')}</div>
                         )}
                         {item.matchall && item.matchall.length > 0 && (
-                          <div>完整匹配: {item.matchall.join(', ')}</div>
+                          <div style={{ fontSize: '12px' }}>完整匹配: {item.matchall.join(', ')}</div>
                         )}
                       </div>
                     </List.Item>
@@ -303,7 +365,7 @@ const Sidebar = ({
             
             {selectedConfigDetails.avoid_returns && selectedConfigDetails.avoid_returns.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <h4>避免返回值:</h4>
+                <h4 style={{ fontSize: '14px' }}>避免返回值:</h4>
                 <List
                   size="small"
                   bordered
@@ -313,13 +375,13 @@ const Sidebar = ({
                       <div>
                         <div><strong>规则 {index + 1}:</strong></div>
                         {item.front && item.front.length > 0 && (
-                          <div>前缀匹配: {item.front.join(', ')}</div>
+                          <div style={{ fontSize: '12px' }}>前缀匹配: {item.front.join(', ')}</div>
                         )}
                         {item.back && item.back.length > 0 && (
-                          <div>后缀匹配: {item.back.join(', ')}</div>
+                          <div style={{ fontSize: '12px' }}>后缀匹配: {item.back.join(', ')}</div>
                         )}
                         {item.matchall && item.matchall.length > 0 && (
-                          <div>完整匹配: {item.matchall.join(', ')}</div>
+                          <div style={{ fontSize: '12px' }}>完整匹配: {item.matchall.join(', ')}</div>
                         )}
                       </div>
                     </List.Item>

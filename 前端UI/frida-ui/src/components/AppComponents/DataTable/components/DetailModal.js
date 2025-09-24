@@ -1,8 +1,10 @@
-import React from 'react';
-import { Modal, Tabs, Descriptions, Tag } from 'antd';
-import { convertToHex, convertToAscii, magicDecodeSync } from '../utils';
+import React, { useState } from 'react';
+import { Modal, Tabs, Descriptions, Tag, Typography, Dropdown, Menu, message } from 'antd';
+import { convertToHex, convertToAscii, isJSON, formatJSON } from '../utils';
+import CollapsibleJSON from './CollapsibleJSON';
 
 const { TabPane } = Tabs;
+const { Text, Paragraph } = Typography;
 
 // 解析可能的数组数据
 const parseArrayData = (data) => {
@@ -41,6 +43,53 @@ const parseArrayData = (data) => {
   return [data];
 };
 
+// 可右键菜单的文本组件
+const ContextMenuText = ({ children, text }) => {
+  const [selectedText, setSelectedText] = useState('');
+
+  const handleContextMenu = (e) => {
+    const selection = window.getSelection().toString();
+    setSelectedText(selection);
+  };
+
+  const handleCopy = () => {
+    if (selectedText) {
+      navigator.clipboard.writeText(selectedText);
+      message.success('已复制到剪贴板');
+    }
+  };
+
+  const handleSmartDecode = () => {
+    if (selectedText) {
+      // TODO: 实现智能解码功能
+      message.info('智能解码功能待实现');
+    }
+  };
+
+  const menu = (
+    <Menu>
+      <Menu.Item key="copy" onClick={handleCopy}>
+        复制
+      </Menu.Item>
+      <Menu.Item key="decode" onClick={handleSmartDecode}>
+        智能解码
+      </Menu.Item>
+    </Menu>
+  );
+
+  return (
+    <Dropdown 
+      overlay={menu} 
+      trigger={['contextMenu']}
+      overlayStyle={{ minWidth: '120px' }}
+    >
+      <div onContextMenu={handleContextMenu} style={{ display: 'inline-block' }}>
+        {children}
+      </div>
+    </Dropdown>
+  );
+};
+
 // 渲染参数列表
 const renderArgsList = (args, converter = null) => {
   if (!args || args.length === 0) {
@@ -52,12 +101,42 @@ const renderArgsList = (args, converter = null) => {
   
   return (
     <div>
-      {parsedArgs.map((arg, index) => (
-        <div key={index} style={{ marginBottom: '8px' }}>
-          {`参数${index + 1}: `}
-          <span>{converter ? converter(arg) : String(arg)}</span>
-        </div>
-      ))}
+      {parsedArgs.map((arg, index) => {
+        const formattedArg = converter ? converter(arg) : String(arg);
+        const isJsonData = isJSON(formattedArg);
+        
+        // 检查是否为JSON且包含$className键
+        let hasClassName = false;
+        let parsedJsonData = null;
+        if (isJsonData) {
+          try {
+            parsedJsonData = JSON.parse(formattedArg);
+            hasClassName = parsedJsonData.hasOwnProperty('$className');
+          } catch (e) {
+            // 解析失败，保持hasClassName为false
+          }
+        }
+        
+        return (
+          <div key={index} style={{ marginBottom: '8px' }}>
+            {hasClassName ? `参数${index + 1}（内部属性遍历）：` : `参数${index + 1}：`}
+            {isJsonData ? (
+              <div style={{
+                background: '#f5f5f5',
+                padding: '8px',
+                borderRadius: '4px',
+                margin: '4px 0'
+              }}>
+                <CollapsibleJSON data={JSON.parse(formattedArg)} />
+              </div>
+            ) : (
+              <ContextMenuText text={formattedArg}>
+                <span>{formattedArg}</span>
+              </ContextMenuText>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -75,17 +154,51 @@ const renderReturnValue = (returns, converter = null) => {
     // 如果是数组形式的返回值
     return (
       <div>
-        {parsedReturns.map((ret, index) => (
-          <div key={index} style={{ marginBottom: '8px' }}>
-            {`返回值${index + 1}: `}
-            <span>{converter ? converter(ret) : String(ret)}</span>
-          </div>
-        ))}
+        {parsedReturns.map((ret, index) => {
+          const formattedReturn = converter ? converter(ret) : String(ret);
+          const isJsonData = isJSON(formattedReturn);
+          
+          return (
+            <div key={index} style={{ marginBottom: '8px' }}>
+              {`返回值${index + 1}: `}
+              {isJsonData ? (
+                <div style={{
+                  background: '#f5f5f5',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  margin: '4px 0'
+                }}>
+                  <CollapsibleJSON data={JSON.parse(formattedReturn)} />
+                </div>
+              ) : (
+                <ContextMenuText text={formattedReturn}>
+                  <span>{formattedReturn}</span>
+                </ContextMenuText>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   } else {
     // 单个返回值
-    return converter ? converter(parsedReturns[0]) : String(parsedReturns[0]);
+    const formattedReturn = converter ? converter(parsedReturns[0]) : String(parsedReturns[0]);
+    const isJsonData = isJSON(formattedReturn);
+    
+    return isJsonData ? (
+      <div style={{
+        background: '#f5f5f5',
+        padding: '8px',
+        borderRadius: '4px',
+        margin: 0
+      }}>
+        <CollapsibleJSON data={JSON.parse(formattedReturn)} />
+      </div>
+    ) : (
+      <ContextMenuText text={formattedReturn}>
+        <span>{formattedReturn}</span>
+      </ContextMenuText>
+    );
   }
 };
 
@@ -107,8 +220,12 @@ const DetailModal = ({
       onCancel={onCancel}
       footer={null}
       width={modalWidth}
-      style={{ top: 20 }}
-      bodyStyle={{ padding: 0 }}
+      style={{ 
+        top: 20
+      }}
+      bodyStyle={{ 
+        padding: 0
+      }}
     >
       <Tabs defaultActiveKey="1" tabBarStyle={{ margin: 0 }}>
         <TabPane tab="基本信息" key="1" forceRender>
@@ -160,10 +277,6 @@ const DetailModal = ({
         <TabPane tab="原始数据" key="3" forceRender>
           <div className="tab-content">
             <pre style={{
-              padding: '16px', 
-              borderRadius: '4px',
-              maxHeight: '50vh',
-              overflow: 'auto',
               whiteSpace: 'pre-wrap',
               wordWrap: 'break-word',
               fontSize: '12px',
@@ -171,7 +284,7 @@ const DetailModal = ({
               border: '1px solid #e8e8e8',
               margin: 0
             }}>
-              {JSON.stringify(record, null, 2)}
+              {record ? JSON.stringify(record, null, 2) : '未选择任何记录'}
             </pre>
           </div>
         </TabPane>

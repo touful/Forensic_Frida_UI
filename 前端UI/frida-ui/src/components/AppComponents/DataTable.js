@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { Layout, Table, Input, Row, Col, Card, Typography, Tooltip } from 'antd';
 import { SearchOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import ResizableTitle from './DataTable/components/ResizableTitle';
@@ -9,6 +9,12 @@ import SmartForensics from './SmartForensics';
 
 const { Content } = Layout;
 const { Text } = Typography;
+
+// 使用memo优化渲染性能
+const OptimizedRow = memo(({ record, handleRowClick, mouseStateRef }) => {
+  // 这个组件现在不需要返回任何内容，事件处理直接在onRow中完成
+  return null;
+});
 
 const DEFAULT_COLUMNS = [
   {
@@ -37,7 +43,8 @@ const DEFAULT_COLUMNS = [
   }
 ];
 
-const DataTable = ({ 
+// 使用memo包装整个组件以优化重渲染
+const DataTable = memo(({ 
   windowSize, 
   data, 
   filteredData,
@@ -45,13 +52,20 @@ const DataTable = ({
   searchText,
   setSearchText,
   columns: propsColumns, // 重命名属性
-  pageType // 新增页面类型参数
+  pageType, // 新增页面类型参数
+  // 接收详细信息模态框相关状态和函数
+  selectedRecord,
+  setSelectedRecord,
+  detailModalVisible,
+  setDetailModalVisible,
+  modalWidth,
+  setModalWidth
 }) => {
   const containerRef = useRef(null);
   const [columns, setColumns] = useState([]); // 初始为空，等待 defaultColumns 计算
   const [containerWidth, setContainerWidth] = useState(0); // 添加containerWidth状态
   const [sortedData, setSortedData] = useState([]); // 存储排序后的数据
-  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' }); // 排序配置，默认按ID升序
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' }); // 排序配置，默认按ID降序
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 200,
@@ -61,10 +75,16 @@ const DataTable = ({
     showTotal: (total, range) => `${range[0]}-${range[1]} 条，共 ${total} 条`
   });
   
-  // 详细信息模态框相关状态
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
-  const [modalWidth, setModalWidth] = useState(800);
+  // 用于检测是否发生拖动的变量
+  const mouseStateRef = useRef({
+    isDragging: false,
+    mouseDownPosition: { x: 0, y: 0 }
+  });
+  
+  // 详细信息模态框相关状态 - 现在从props接收
+  // const [detailModalVisible, setDetailModalVisible] = useState(false);
+  // const [selectedRecord, setSelectedRecord] = useState(null);
+  // const [modalWidth, setModalWidth] = useState(800);
 
   const defaultColumns = useMemo(() => {
     // 确保windowSize存在再调用getDefaultColumns
@@ -85,7 +105,6 @@ const DataTable = ({
         return renderFridaMonitor();
     }
   };
-
 
   // 处理排序
   const handleSort = (key) => {
@@ -237,17 +256,17 @@ const DataTable = ({
   // 处理行点击事件
   const handleRowClick = (record) => {
     setSelectedRecord(record);
-    setDetailModalVisible(true);
-    
-    // 根据窗口大小动态调整模态框宽度
-    const width = window.innerWidth < 768 ? window.innerWidth * 0.95 : Math.min(1200, window.innerWidth * 0.8);
+    // 根据窗口大小动态设置模态框宽度 - 统一使用windowSize
+    const width = windowSize.width < 768 ? windowSize.width * 0.95 : Math.min(1000, windowSize.width * 0.7);
     setModalWidth(width);
+    setDetailModalVisible(true);
   };
 
   // 关闭详细信息模态框
   const closeDetailModal = () => {
     setDetailModalVisible(false);
     setSelectedRecord(null);
+    setModalWidth(800); // 重置为默认宽度
   };
 
   // 渲染Frida监控内容
@@ -290,8 +309,46 @@ const DataTable = ({
       .ant-table-tbody > tr > td {
         word-break: break-all;
         word-wrap: break-word;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 40px;
+      }
+      
+      .ant-table-row {
+        cursor: pointer;
       }
     `;
+
+    // 行事件处理函数
+    const handleRowEvents = (record) => {
+      return {
+        onMouseDown: (event) => {
+          // 记录鼠标按下时的位置
+          if (event.button === 0) { // 仅处理左键
+            mouseStateRef.current.mouseDownPosition = { x: event.clientX, y: event.clientY };
+            mouseStateRef.current.isDragging = false;
+          }
+        },
+        onMouseMove: (event) => {
+          // 检测是否发生拖动
+          if (event.buttons === 1) { // 左键被按下
+            const deltaX = Math.abs(event.clientX - mouseStateRef.current.mouseDownPosition.x);
+            const deltaY = Math.abs(event.clientY - mouseStateRef.current.mouseDownPosition.y);
+            // 如果移动距离超过阈值，则认为是拖动
+            if (deltaX > 5 || deltaY > 5) {
+              mouseStateRef.current.isDragging = true;
+            }
+          }
+        },
+        onMouseUp: (event) => {
+          // 只有左键单击且未发生拖动时才触发模态框
+          if (event.button === 0 && !mouseStateRef.current.isDragging) {
+            handleRowClick(record);
+          }
+        },
+      };
+    };
 
     return (
       <>
@@ -313,7 +370,7 @@ const DataTable = ({
                 fontSize: windowSize && windowSize.width < 576 ? '12px' : '14px', 
                 fontWeight: 500 
               }}>
-                数据条数: {data?.length || 0}
+                数据条数: {filteredData?.length || 0}
               </div>
             </Card>
           </Col>
@@ -348,13 +405,11 @@ const DataTable = ({
           tableLayout="fixed"
           sticky
           onChange={handleTableChange}
-          onRow={(record) => ({
-            onClick: () => handleRowClick(record),
-          })}
+          onRow={handleRowEvents}
         />
         
         <DetailModal
-          visible={detailModalVisible}
+          open={detailModalVisible}
           onCancel={closeDetailModal}
           record={selectedRecord}
           width={modalWidth}
@@ -376,6 +431,6 @@ const DataTable = ({
       {renderContent()}
     </Content>
   );
-};
+});
 
 export default DataTable;

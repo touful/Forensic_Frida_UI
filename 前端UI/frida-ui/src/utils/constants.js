@@ -18,4 +18,4 @@ export const DEFAULT_HOOK_CONFIG = [
 export const DEFAULT_TARGET_PACKAGE = 'com.example.testoffridalab';
 
 // 默认的设备ID
-export const DEFAULT_DEVICE_ID = 'emulator-5554';
+export const DEFAULT_DEVICE_ID = '09221JEC204223';

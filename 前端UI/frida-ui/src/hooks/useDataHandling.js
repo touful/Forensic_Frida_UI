@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('DataHandling');
 
 export const useDataHandling = (isMounted) => {
   const [data, setData] = useState([]);
@@ -70,8 +73,11 @@ export const useDataHandling = (isMounted) => {
     if (isMounted.current) {
       setData(prevData => {
         const updatedData = [...newDataItems, ...prevData];
+        // 按ID降序排列
+        updatedData.sort((a, b) => b.id - a.id);
         // 限制总数为10000条
-        return updatedData.slice(0, 10000);
+        const limitedData = updatedData.slice(0, 10000);
+        return limitedData;
       });
     }
     
@@ -126,6 +132,7 @@ export const useDataHandling = (isMounted) => {
 
   // 清空数据
   const clearData = () => {
+    logger.info('清空通用数据');
     setData([]);
     setFilteredData([]);
     dataCounter.current = 0;

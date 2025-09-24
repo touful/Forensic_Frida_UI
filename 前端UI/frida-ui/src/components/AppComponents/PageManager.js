@@ -38,8 +38,9 @@ const PageManager = ({
         name: `${pageType.label}`,
         type: pageType.key,
         typeName: pageType.label,
-        data: [],
-        filteredData: [],
+        // 对于Frida监控页面，使用全局数据状态
+        data: pageType.key === 'frida-monitor' ? [] : [],
+        filteredData: pageType.key === 'frida-monitor' ? [] : [],
         dataCounterRef: { current: 0 } // 添加数据计数器引用
       };
       onPageCreate(newPage);
